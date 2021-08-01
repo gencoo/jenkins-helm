@@ -45,7 +45,7 @@ controller:
   # If you disable the non-Jenkins identity store and instead use the Jenkins internal one,
   # you should revert controller.adminUser to your preferred admin user:
   adminUser: "admin"
-  # adminPassword: <defaults to random>
+  adminPassword: jenkins
   admin:
     existingSecret: ""
     userKey: jenkins-admin-user
@@ -219,10 +219,10 @@ controller:
   # List of plugins to be install during Jenkins controller start
   installPlugins:
     - kubernetes:1.29.4
-    - workflow-aggregator:2.6
+  #  - workflow-aggregator:2.6
     - git:4.7.1
     - configuration-as-code:1.51
-
+    - prometheus:2.0.10
   # Set to false to download the minimum required version of all dependencies.
   installLatestPlugins: false
 
@@ -235,7 +235,7 @@ controller:
   # Enable to initialize the Jenkins controller only once on initial installation.
   # Without this, whenever the controller gets restarted (Evicted, etc.) it will fetch plugin updates which has the potential to cause breakage.
   # Note that for this to work, `persistence.enabled` needs to be set to `true`
-  initializeOnce: false
+  initializeOnce: true
 
   # Enable to always override the installed plugins with the values of 'controller.installPlugins' on upgrade or redeployment.
   # overwritePlugins: true
@@ -394,17 +394,17 @@ controller:
   updateStrategy: {}
 
   ingress:
-    enabled: false
+    enabled: true
     # Override for the default paths that map requests to the backend
     paths: []
-    # - backend:
-    #     serviceName: ssl-redirect
-    #     servicePort: use-annotation
-    # - backend:
-    #     serviceName: >-
-    #       {{ template "jenkins.fullname" . }}
-    #     # Don't use string here, use only integer value!
-    #     servicePort: 8080
+    paths:
+    - backend:
+        service:
+          name: jenkins
+          port:
+            number: 8080
+      path: /
+      pathType: Prefix      
     # For Kubernetes v1.14+, use 'networking.k8s.io/v1beta1'
     # For Kubernetes v1.19+, use 'networking.k8s.io/v1'
     apiVersion: "extensions/v1beta1"
@@ -418,11 +418,11 @@ controller:
     # Set this path to jenkinsUriPrefix above or use annotations to rewrite path
     # path: "/jenkins"
     # configures the hostname e.g. jenkins.example.com
-    hostName:
+    hostName: jenkins.cluster.local
     tls:
-    # - secretName: jenkins.cluster.local
-    #   hosts:
-    #     - jenkins.cluster.local
+     - secretName: jenkins.cluster.local
+       hosts:
+         - jenkins.cluster.local
 
   # often you want to have your controller all locked down and private
   # but you still want to get webhooks from your SCM
@@ -483,8 +483,8 @@ controller:
     # If enabled, add the prometheus plugin to the list of plugins to install
     # https://plugins.jenkins.io/prometheus
     enabled: false
-    # Additional labels to add to the ServiceMonitor object
-    serviceMonitorAdditionalLabels: {}
+    #  serviceMonitorAdditionalLabels:
+    #  monitor: enabled
     # Set a custom namespace where to deploy ServiceMonitor resource
     # serviceMonitorNamespace: monitoring
     scrapeInterval: 60s
@@ -610,10 +610,10 @@ agent:
   #   readOnly: false
   #   serverAddress: "192.0.2.0"
   #   serverPath: /var/lib/containers
-  # - type: PVC
-  #   claimName: mypvc
-  #   mountPath: /var/myapp/mypvc
-  #   readOnly: false
+   - type: PVC
+     claimName: mypvc
+     mountPath: /var/myapp/mypvc
+     readOnly: false
   # - type: Secret
   #   defaultMode: "600"
   #   mountPath: /var/myapp/mysecret
@@ -739,7 +739,7 @@ persistence:
   storageClass:
   annotations: {}
   accessMode: "ReadWriteOnce"
-  size: "8Gi"
+  size: "2Gi"
   volumes:
   #  - name: nothing
   #    emptyDir: {}
